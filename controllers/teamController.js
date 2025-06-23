@@ -160,26 +160,46 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       return res.status(403).json({ message: 'Not authorized to update this team' });
     }
 
+    const oldTeam = { ...team._doc }; // Create a copy of the original team document
     const oldMembers = team.members.map((id) => id.toString());
-    team.name = name || team.name;
-    team.description = description || team.description;
-    team.members = members || team.members;
+
+    // Update team fields
+    if (name !== undefined) team.name = name;
+    if (description !== undefined) team.description = description;
+    if (members !== undefined) team.members = members;
 
     await team.save();
 
-    // Log team update
-    let logDetails = `Team "${team.name}" was updated`;
-    let logAction = 'update';
+    // Log team update with more specific details
+    let changes = [];
+    if (oldTeam.name !== team.name)
+      changes.push(`name from "${oldTeam.name}" to "${team.name}"`);
+    if (oldTeam.description !== team.description)
+      changes.push(`description`);
 
-    if (members && JSON.stringify(oldMembers) !== JSON.stringify(members)) {
-      logAction = 'assign';
-      const addedCount = members.filter(m => !oldMembers.includes(m.toString())).length;
-      const removedCount = oldMembers.filter(m => !members.includes(m.toString())).length;
-      logDetails = `Team members updated: ${addedCount} added, ${removedCount} removed`;
+    // Handle members changes
+    const newMembers = team.members.map((id) => id.toString());
+    const addedMembers = newMembers.filter(m => !oldMembers.includes(m));
+    const removedMembers = oldMembers.filter(m => !newMembers.includes(m));
+
+    if (addedMembers.length > 0 || removedMembers.length > 0) {
+      let memberChanges = [];
+      if (addedMembers.length > 0) {
+        memberChanges.push(`${addedMembers.length} member(s) added`);
+      }
+      if (removedMembers.length > 0) {
+        memberChanges.push(`${removedMembers.length} member(s) removed`);
+      }
+      changes.push(`members: ${memberChanges.join(' and ')}`);
+    }
+
+    let logDetails = `Team "${team.name}" was updated.`;
+    if (changes.length > 0) {
+      logDetails = `Team "${team.name}" updated: ${changes.join(', ')}.`;
     }
 
     await ActivityLog.create({
-      action: logAction,
+      action: 'update',
       entity: 'team',
       entityId: team._id,
       performedBy: req.user._id,
@@ -190,29 +210,16 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       .populate('members', 'name email')
       .populate('createdBy', 'name email');
 
-    // Notify all current members about the team update
-    members.forEach((userId) => {
-      const userIdStr = userId.toString();
-      if (connectedUsers.has(userIdStr)) {
-        console.log(`Emitting teamAdded to connected user ${userIdStr}`);
-        io.to(userIdStr).emit('teamAdded', {
-          team: populatedTeam,
-          message: `Team "${name}" has been updated by ${req.user.name}`,
-        });
-      }
-    });
-
     // Notify new members
-    const newMembers = members.filter(
-      (userId) => !oldMembers.includes(userId.toString())
-    );
-    newMembers.forEach((userId) => {
+    console.log('populatedTeam:', populatedTeam);
+    console.log('connectedUsers:', Array.from(connectedUsers));
+    addedMembers.forEach((userId) => {
       const userIdStr = userId.toString();
       if (connectedUsers.has(userIdStr)) {
         console.log(`Emitting teamAdded to connected user ${userIdStr}`);
         io.to(userIdStr).emit('teamAdded', {
           team: populatedTeam,
-          message: `You have been added to team "${name}" by ${req.user.name}`,
+          message: `You have been added to team "${team.name}" by ${req.user.name}`,
         });
       } else {
         console.log(`User ${userIdStr} is not connected, skipping teamAdded notification`);
@@ -220,19 +227,28 @@ const updateTeam = async (req, res, io, connectedUsers) => {
     });
 
     // Notify removed members
-    const removedMembers = oldMembers.filter(
-      (userId) => !members.includes(userId.toString())
-    );
     removedMembers.forEach((userId) => {
       const userIdStr = userId.toString();
       if (connectedUsers.has(userIdStr)) {
         console.log(`Emitting teamRemoved to connected user ${userIdStr}`);
         io.to(userIdStr).emit('teamRemoved', {
           teamId: team._id,
-          message: `You have been removed from team "${name}" by ${req.user.name}`,
+          message: `You have been removed from team "${oldTeam.name}" by ${req.user.name}`,
         });
       } else {
         console.log(`User ${userIdStr} is not connected, skipping teamRemoved notification`);
+      }
+    });
+
+    // Notify all current members (including those who were already members and new members) about the team update
+    populatedTeam.members.forEach((member) => {
+      const userIdStr = member._id.toString();
+      if (connectedUsers.has(userIdStr)) {
+        console.log(`Emitting teamUpdated to connected user ${userIdStr}`); // Added this line
+        io.to(userIdStr).emit('teamUpdated', {
+          team: populatedTeam,
+          message: `Team "${team.name}" has been updated by ${req.user.name}`,
+        });
       }
     });
 
