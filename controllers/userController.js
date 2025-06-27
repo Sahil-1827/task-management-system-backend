@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 
 // Get all users (filtered by role, excluding the requesting user)
 const getUsers = async (req, res) => {
@@ -31,6 +32,15 @@ const updateUserProfile = async (req, res) => {
 
       // Save the updated user to the database
       const updatedUser = await user.save();
+
+      // Log user profile update
+      await ActivityLog.create({
+        action: 'update',
+        entity: 'user',
+        entityId: updatedUser._id,
+        performedBy: req.user._id,
+        details: `User profile for "${updatedUser.name}" was updated by ${req.user.name}`
+      });
 
       // Return the updated user data
       res.json({

@@ -26,7 +26,7 @@ const createTeam = async (req, res, io, connectedUsers) => {
       entity: 'team',
       entityId: team._id,
       performedBy: req.user._id,
-      details: `Team "${team.name}" was created`
+      details: `Team "${team.name}" was created by ${req.user.name}`
     });
 
     const populatedTeam = await Team.findById(team._id)
@@ -193,9 +193,9 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       changes.push(`members: ${memberChanges.join(' and ')}`);
     }
 
-    let logDetails = `Team "${team.name}" was updated.`;
+    let logDetails = `Team "${team.name}" was updated by ${req.user.name}.`;
     if (changes.length > 0) {
-      logDetails = `Team "${team.name}" updated: ${changes.join(', ')}.`;
+      logDetails = `Team "${team.name}" updated by ${req.user.name}: ${changes.join(', ')}.`;
     }
 
     await ActivityLog.create({
@@ -284,7 +284,7 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
       entity: 'team',
       entityId: team._id,
       performedBy: req.user._id,
-      details: `Team "${teamName}" was deleted`
+      details: `Team "${teamName}" was deleted by ${req.user.name}`
     });
 
     await Team.deleteOne({ _id: req.params.id });
