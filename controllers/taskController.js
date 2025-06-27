@@ -141,7 +141,8 @@ const getTasks = async (req, res) => {
 
     // Add status filter if provided
     if (status) {
-      query.status = status;
+      const statuses = status.split(',');
+      query.status = { $in: statuses };
     }
 
     // Add priority filter if provided
@@ -150,7 +151,7 @@ const getTasks = async (req, res) => {
     }
 
     // Add assignee filter if provided
-    if (assignee) {
+    if (assignee && assignee !== 'undefined') {
       query.assignee = assignee;
     }
 
@@ -215,7 +216,6 @@ const getTaskById = async (req, res) => {
   }
 };
 
-// Update a task
 // Update a task
 const updateTask = async (req, res, io, connectedUsers) => {
   try {
