@@ -1,6 +1,7 @@
 const Task = require("../models/Task");
 const Team = require("../models/Team");
 const ActivityLog = require("../models/ActivityLog");
+const User = require("../models/User");
 
 // Create a new task
 const createTask = async (req, res, io, connectedUsers) => {
@@ -32,12 +33,25 @@ const createTask = async (req, res, io, connectedUsers) => {
     await task.save();
 
     // Log task creation
+    let logDetails = `Task "${task.title}" was created`;
+    if (assignee) {
+      const assignedUser = await User.findById(assignee);
+      if (assignedUser) {
+        logDetails += ` and assigned to ${assignedUser.name}`;
+      }
+    } else if (team) {
+      const assignedTeam = await Team.findById(team);
+      if (assignedTeam) {
+        logDetails += ` and assigned to team ${assignedTeam.name}`;
+      }
+    }
+
     await ActivityLog.create({
       action: "create",
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
-      details: `Task "${task.title}" was created`
+      details: logDetails
     });
 
     const populatedTask = await Task.findById(task._id)

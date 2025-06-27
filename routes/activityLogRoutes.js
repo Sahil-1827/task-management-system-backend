@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const ActivityLog = require("../models/ActivityLog");
+const Task = require("../models/Task");
+const Team = require("../models/Team");
 const { protect } = require("../middleware/authMiddleware");
 
 const activityLogRoutes = (io, connectedUsers) => {
@@ -11,24 +13,29 @@ const activityLogRoutes = (io, connectedUsers) => {
       const { limit = 25 } = req.query; // Get limit from query, default to 25
       let query = {};
 
-      // Apply role-based filters
-      // Removed role-based filtering to allow all users to see all logs
-      // if (user.role === 'admin') {
-      //   // Admins can see all logs
-      //   query = {};
-      // } else if (user.role === 'manager') {
-      //   // Managers can see logs related to their teams and tasks
-      //   query = {
-      //     $or: [
-      //       { performedBy: user._id },
-      //       { entityId: { $in: user.teams } },
-      //       { entityId: { $in: user.managedTasks } }
-      //     ]
-      //   };
-      // } else {
-      //   // Regular users can only see their own logs
-      //   query = { performedBy: user._id };
-      // }
+      if (user.role === "admin") {
+        // Admins can see all logs
+        query = {};
+      } else {
+        // For non-admins, fetch tasks where the user is an assignee OR a member of the assigned team
+        const userTeams = await Team.find({ members: user._id }).select(
+          "_id"
+        );
+        const teamIds = userTeams.map((team) => team._id);
+
+        const userTasks = await Task.find({
+          $or: [{ assignee: user._id }, { team: { $in: teamIds } }]
+        }).select("_id");
+        const taskIds = userTasks.map((task) => task._id);
+
+        query = {
+          $or: [
+            { performedBy: user._id },
+            { entity: "team", entityId: { $in: teamIds } },
+            { entity: "task", entityId: { $in: taskIds } }
+          ]
+        };
+      }
 
       const logs = await ActivityLog.find(query)
         .populate("performedBy", "name email")
