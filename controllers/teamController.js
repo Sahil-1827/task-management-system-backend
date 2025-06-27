@@ -205,6 +205,28 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       performedBy: req.user._id,
       details: logDetails
     });
+     // Create user-specific logs for added members
+    for (const userId of addedMembers) {
+      await ActivityLog.create({
+        action: "assign",
+        entity: "user",
+        entityId: userId,
+        performedBy: req.user._id,
+        details: `You were added to team "${team.name}" by ${req.user.name}`
+      });
+    }
+
+    // Create user-specific logs for removed members
+    for (const userId of removedMembers) {
+      await ActivityLog.create({
+        action: "delete",
+        entity: "user",
+        entityId: userId,
+        performedBy: req.user._id,
+        details: `You were removed from team "${oldTeam.name}" by ${req.user.name}`
+      });
+    }
+
 
     const populatedTeam = await Team.findById(team._id)
       .populate('members', 'name email')
@@ -286,6 +308,19 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
       performedBy: req.user._id,
       details: `Team "${teamName}" was deleted by ${req.user.name}`
     });
+     // Create user-specific logs for all members of the deleted team
+    for (const userId of teamMembers) {
+      if (userId !== req.user._id.toString()) { // Don't log for the user performing the action
+        await ActivityLog.create({
+          action: "delete",
+          entity: "user",
+          entityId: userId,
+          performedBy: req.user._id,
+          details: `The team "${teamName}" you were a member of was deleted by ${req.user.name}`
+        });
+      }
+    }
+
 
     await Team.deleteOne({ _id: req.params.id });
 

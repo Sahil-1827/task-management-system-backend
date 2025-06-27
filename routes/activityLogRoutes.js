@@ -32,7 +32,8 @@ const activityLogRoutes = (io, connectedUsers) => {
           $or: [
             { performedBy: user._id },
             { entity: "team", entityId: { $in: teamIds } },
-            { entity: "task", entityId: { $in: taskIds } }
+            { entity: "task", entityId: { $in: taskIds } },
+            { entity: "user", entityId: user._id }
           ]
         };
       }
