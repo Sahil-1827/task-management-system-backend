@@ -15,7 +15,7 @@ const teamSchema = new mongoose.Schema({
     ref: 'User',
   }],
   managers: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId, // Corrected from mongoose.schema.Types.ObjectId
     ref: 'User',
     required: true,
   }],

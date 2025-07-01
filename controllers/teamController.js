@@ -15,6 +15,7 @@ const createTeam = async (req, res, io, connectedUsers) => {
       name,
       description,
       members: members || [],
+      managers: [req.user._id], // Add the creator to the managers array
       createdBy: req.user._id,
     });
 

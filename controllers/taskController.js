@@ -221,14 +221,44 @@ const updateTask = async (req, res, io, connectedUsers) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    if (
-      req.user.role !== "admin" &&
-      task.createdBy.toString() !== req.user._id.toString()
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to update this task" });
+    // --- Start of New Authorization Logic ---
+    const isCreator = task.createdBy.toString() === req.user._id.toString();
+    const isAssignee = task.assignee && task.assignee.toString() === req.user._id.toString();
+
+    let isTeamMember = false;
+    let isTeamManager = false;
+    if (task.team) {
+      const teamData = await Team.findById(task.team);
+      if (teamData) {
+        isTeamMember = teamData.members.some(memberId => memberId.toString() === req.user._id.toString());
+        isTeamManager = teamData.managers.some(managerId => managerId.toString() === req.user._id.toString());
+      }
     }
+
+    const isStatusUpdateOnly = Object.keys(req.body).length === 1 && req.body.hasOwnProperty('status');
+    let canUpdate = false;
+
+    // Admins can always update
+    if (req.user.role === 'admin') {
+      canUpdate = true;
+    }
+    // Managers can update if they created the task or manage the assigned team
+    else if (req.user.role === 'manager') {
+      if (isCreator || isTeamManager) {
+        canUpdate = true;
+      }
+    }
+    // Users can ONLY update the status if they are an assignee or a team member
+    else if (req.user.role === 'user') {
+      if (isStatusUpdateOnly && (isAssignee || isTeamMember)) {
+        canUpdate = true;
+      }
+    }
+
+    if (!canUpdate) {
+      return res.status(403).json({ message: "Not authorized to update this task" });
+    }
+    // --- End of New Authorization Logic ---
 
     if (assignee && team) {
       return res
@@ -243,14 +273,21 @@ const updateTask = async (req, res, io, connectedUsers) => {
     const oldAssignee = oldTask.assignee ? oldTask.assignee.toString() : null; // Capture old assignee
     const oldTeam = oldTask.team ? oldTask.team.toString() : null; // Capture old team
 
-    // Update task fields
-    if (title !== undefined) task.title = title;
-    if (description !== undefined) task.description = description;
-    if (status !== undefined) task.status = status;
-    if (priority !== undefined) task.priority = priority;
-    if (dueDate !== undefined) task.dueDate = dueDate;
-    task.assignee = assignee === null ? null : assignee || task.assignee;
-    task.team = team === null ? null : team || task.team;
+    // --- Start of Conditional Field Update ---
+    // If a regular 'user' is making the update, only allow the status to be changed.
+    if (req.user.role === 'user' && isStatusUpdateOnly) {
+      task.status = status;
+    } else {
+      // For admins and managers, allow a full update.
+      if (title !== undefined) task.title = title;
+      if (description !== undefined) task.description = description;
+      if (status !== undefined) task.status = status;
+      if (priority !== undefined) task.priority = priority;
+      if (dueDate !== undefined) task.dueDate = dueDate;
+      task.assignee = assignee === null ? null : assignee || task.assignee;
+      task.team = team === null ? null : team || task.team;
+    }
+    // --- End of Conditional Field Update ---
 
     await task.save();
 
@@ -264,7 +301,6 @@ const updateTask = async (req, res, io, connectedUsers) => {
     if (oldTask.priority !== task.priority)
       changes.push(`priority from "${oldTask.priority}" to "${task.priority}"`);
 
-    // Handle dueDate changes, considering potential date object vs string comparison
     const oldDueDate = oldTask.dueDate
       ? new Date(oldTask.dueDate).toISOString().split("T")[0]
       : "";
@@ -277,7 +313,6 @@ const updateTask = async (req, res, io, connectedUsers) => {
       );
     }
 
-    // Handle assignee changes
     const newAssigneeId = task.assignee ? task.assignee.toString() : null;
     if (oldAssignee !== newAssigneeId) {
       if (newAssigneeId) {
@@ -287,7 +322,6 @@ const updateTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    // Handle team changes
     const newTeamId = task.team ? task.team.toString() : null;
     if (oldTeam !== newTeamId) {
       if (newTeamId) {
@@ -315,7 +349,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       .populate("team", "name")
       .populate("createdBy", "name email");
 
-    // Send update notification to current assignee
+    // Notifications (unchanged)
     if (task.assignee && connectedUsers.has(task.assignee.toString())) {
       io.to(task.assignee.toString()).emit("taskUpdated", {
         task: populatedTask,
@@ -323,12 +357,8 @@ const updateTask = async (req, res, io, connectedUsers) => {
       });
     }
 
-    // Send update notification to team members
     if (task.team) {
-      const teamData = await Team.findById(task.team).populate(
-        "members",
-        "name email"
-      );
+      const teamData = await Team.findById(task.team).populate("members", "name email");
       if (teamData) {
         teamData.members.forEach((member) => {
           if (connectedUsers.has(member._id.toString())) {
@@ -341,7 +371,6 @@ const updateTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    // Handle assignee changes
     if (newAssigneeId !== oldAssignee) {
       if (newAssigneeId && connectedUsers.has(newAssigneeId)) {
         io.to(newAssigneeId).emit("taskAssigned", {
@@ -349,7 +378,6 @@ const updateTask = async (req, res, io, connectedUsers) => {
           message: `Task "${task.title}" has been assigned to you by ${req.user.name}`
         });
       }
-
       if (oldAssignee && connectedUsers.has(oldAssignee)) {
         io.to(oldAssignee).emit("taskUnassigned", {
           taskId: task._id,
@@ -358,13 +386,9 @@ const updateTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    // Handle team changes
     if (newTeamId !== oldTeam) {
       if (newTeamId) {
-        const newTeamData = await Team.findById(newTeamId).populate(
-          "members",
-          "name email"
-        );
+        const newTeamData = await Team.findById(newTeamId).populate("members", "name email");
         if (newTeamData) {
           newTeamData.members.forEach((member) => {
             if (connectedUsers.has(member._id.toString())) {
@@ -376,12 +400,8 @@ const updateTask = async (req, res, io, connectedUsers) => {
           });
         }
       }
-
       if (oldTeam) {
-        const oldTeamData = await Team.findById(oldTeam).populate(
-          "members",
-          "name email"
-        );
+        const oldTeamData = await Team.findById(oldTeam).populate("members", "name email");
         if (oldTeamData) {
           oldTeamData.members.forEach((member) => {
             if (connectedUsers.has(member._id.toString())) {
