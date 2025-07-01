@@ -6,13 +6,18 @@ const {
   getTasks,
   getTaskById,
   updateTask,
-  deleteTask
+  deleteTask,
+  getTaskStatsByPriority,
 } = require("../controllers/taskController");
 
 module.exports = (io, connectedUsers) => {
   router.use(protect);
   router.post("/", (req, res) => createTask(req, res, io, connectedUsers));
   router.get("/", getTasks);
+  
+  // 2. Add the new route for statistics
+  router.get("/stats/priority", getTaskStatsByPriority);
+
   router.get("/:id", getTaskById);
   router.put("/:id", (req, res) => updateTask(req, res, io, connectedUsers));
   router.delete("/:id", (req, res) => deleteTask(req, res, io, connectedUsers));

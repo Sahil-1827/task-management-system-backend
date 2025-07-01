@@ -113,48 +113,41 @@ const getTasks = async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    let query = {};
-    if (req.user.role === "admin") {
-      query = {};
-    } else if (req.user.role === "manager") {
-      query = {
+    const queryConditions = [];
+
+    // Role-based filtering
+    if (req.user.role === "manager") {
+      queryConditions.push({
         $or: [{ createdBy: req.user._id }, { assignee: req.user._id }]
-      };
-    } else {
-      // For regular users, fetch tasks where they are the assignee OR they are a member of the assigned team
-      const userTeams = await Team.find({ members: req.user._id }).select(
-        "_id"
-      );
+      });
+    } else if (req.user.role === "user") {
+      const userTeams = await Team.find({ members: req.user._id }).select("_id");
       const teamIds = userTeams.map((team) => team._id);
-      query = {
+      queryConditions.push({
         $or: [{ assignee: req.user._id }, { team: { $in: teamIds } }]
-      };
+      });
     }
 
-    // Add search condition if search term is provided
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
+      queryConditions.push({
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } }
+        ]
+      });
     }
-
-    // Add status filter if provided
     if (status) {
       const statuses = status.split(',');
-      query.status = { $in: statuses };
+      queryConditions.push({ status: { $in: statuses } });
     }
-
-    // Add priority filter if provided
     if (priority) {
-      query.priority = priority;
+      queryConditions.push({ priority: priority });
     }
-
-    // Add assignee filter if provided
     if (assignee && assignee !== 'undefined') {
-      query.assignee = assignee;
+      queryConditions.push({ assignee: assignee });
     }
 
+    const query = queryConditions.length > 0 ? { $and: queryConditions } : {};
     const sort = {};
     sort[sortField] = sortDirection === "asc" ? 1 : -1;
 
@@ -478,4 +471,60 @@ const deleteTask = async (req, res, io, connectedUsers) => {
   }
 };
 
-module.exports = { createTask, getTasks, getTaskById, updateTask, deleteTask };
+// REPLACE any previous version of getTaskStatsByPriority with this one
+const getTaskStatsByPriority = async (req, res) => {
+  try {
+    const pipeline = [];
+
+    // 1. Conditionally build the initial filtering stage based on user role
+    if (req.user.role === "user") {
+      const userTeams = await Team.find({ members: req.user._id }).select("_id");
+      const teamIds = userTeams.map((team) => team._id);
+      pipeline.push({
+        $match: {
+          $or: [{ assignee: req.user._id }, { team: { $in: teamIds } }],
+        },
+      });
+    } else if (req.user.role === "manager") {
+      pipeline.push({
+        $match: {
+          $or: [{ createdBy: req.user._id }, { assignee: req.user._id }],
+        },
+      });
+    }
+    // For 'admin', we add no initial $match stage, so they get stats for all tasks.
+
+    // 2. Add the final grouping stage to count by priority
+    pipeline.push({
+      $group: {
+        _id: "$priority",
+        count: { $sum: 1 },
+      },
+    });
+
+    const priorityStats = await Task.aggregate(pipeline);
+
+    const counts = { low: 0, medium: 0, high: 0 };
+    for (const stat of priorityStats) {
+      // Handle tasks that may not have a priority set
+      if (!stat._id) continue;
+
+      const priorityKey = stat._id.toLowerCase();
+      if (counts.hasOwnProperty(priorityKey)) {
+        counts[priorityKey] = stat.count;
+      }
+    }
+
+    // SERVER-SIDE LOG: Check your terminal for this message
+    console.log(`[${new Date().toISOString()}] Server sending priority counts for user ${req.user.email}:`, counts);
+
+    res.json(counts);
+    
+  } catch (error) {
+    // SERVER-SIDE LOG: This will show if the function itself has an error
+    console.error(`[${new Date().toISOString()}] Error in getTaskStatsByPriority for user ${req.user.email}:`, error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = { createTask, getTasks, getTaskById, updateTask, deleteTask, getTaskStatsByPriority };
