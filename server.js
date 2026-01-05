@@ -17,8 +17,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: "*",
   },
 });
 
@@ -27,10 +26,7 @@ const socketUserMap = new Map(); // Map socket.id to userId
 
 // Middleware
 app.use(cors({ 
-  origin: "http://localhost:3000",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  origin: "*",
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
