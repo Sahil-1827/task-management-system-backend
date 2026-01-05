@@ -349,8 +349,18 @@ const updateTask = async (req, res, io, connectedUsers) => {
       .populate("team", "name")
       .populate("createdBy", "name email");
 
-    // Notifications (unchanged)
-    if (task.assignee && connectedUsers.has(task.assignee.toString())) {
+    // Notify admins and managers (excluding the updater)
+    const adminsAndManagers = await User.find({ role: { $in: ['admin', 'manager'] }, _id: { $ne: req.user._id } });
+    adminsAndManagers.forEach(user => {
+      if (connectedUsers.has(user._id.toString())) {
+        io.to(user._id.toString()).emit("taskUpdated", {
+          task: populatedTask,
+          message: `Task "${task.title}" has been updated by ${req.user.name}`
+        });
+      }
+    });
+
+if (task.assignee && connectedUsers.has(task.assignee.toString()) && task.assignee.toString() !== req.user._id.toString()) {
       io.to(task.assignee.toString()).emit("taskUpdated", {
         task: populatedTask,
         message: `Task "${task.title}" has been updated by ${req.user.name}`
@@ -361,7 +371,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       const teamData = await Team.findById(task.team).populate("members", "name email");
       if (teamData) {
         teamData.members.forEach((member) => {
-          if (connectedUsers.has(member._id.toString())) {
+          if (connectedUsers.has(member._id.toString()) && member._id.toString() !== req.user._id.toString()) {
             io.to(member._id.toString()).emit("taskUpdated", {
               task: populatedTask,
               message: `Task "${task.title}" in team "${teamData.name}" has been updated by ${req.user.name}`
