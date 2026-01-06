@@ -16,11 +16,12 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-  },
+  transports: ["websocket", "polling"],
+    cors: {
+      origin: "*",
+    },
+    pingTimeout: 60000, // 60 seconds
+    pingInterval: 25000,
 });
 
 const connectedUsers = new Set();
