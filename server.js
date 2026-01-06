@@ -18,6 +18,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });
 
@@ -27,6 +28,9 @@ const socketUserMap = new Map(); // Map socket.id to userId
 // Middleware
 app.use(cors({ 
   origin: "*",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
