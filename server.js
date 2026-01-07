@@ -10,6 +10,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const userRoutes = require("./routes/userRoutes");
 const teamRoutes = require("./routes/teamRoutes");
 const activityLogRoutes = require("./routes/activityLogRoutes");
+const User = require("./models/User");
 
 dotenv.config();
 
@@ -59,16 +60,21 @@ mongoose
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
-  socket.on("join", (userId) => {
+  socket.on("join", async (userId) => {
     if (!userId) {
       console.log("No userId provided for join event, socket:", socket.id);
       return;
     }
-    socket.join(userId);
-    connectedUsers.add(userId);
-    socketUserMap.set(socket.id, userId); // Map socket.id to userId
-    console.log(`User ${userId} joined room ${userId}`);
-    console.log("Connected users:", Array.from(connectedUsers));
+    try {
+      const user = await User.findById(userId);
+      socket.join(userId);
+      connectedUsers.add(userId);
+      socketUserMap.set(socket.id, userId); // Map socket.id to userId
+      console.log(`User ${userId}, ${user.name}, ${user.email}, ${user.role} joined room`);
+      console.log("Connected users:", Array.from(connectedUsers));
+    } catch (error) {
+      console.error("Error fetching user details in socket join:", error);
+    }
   });
 
   socket.on("disconnect", () => {
