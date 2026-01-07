@@ -73,7 +73,7 @@ const login = async (req, res) => {
         });
       } catch (error) {
         // Token invalid or expired, proceed to email/password login
-        console.log('Invalid token, proceeding to email/password login:', error.message);
+        // Token invalid or expired, proceed to email/password login
       }
     }
 

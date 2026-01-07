@@ -221,44 +221,11 @@ const updateTask = async (req, res, io, connectedUsers) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // --- Start of New Authorization Logic ---
-    const isCreator = task.createdBy.toString() === req.user._id.toString();
-    const isAssignee = task.assignee && task.assignee.toString() === req.user._id.toString();
-
-    let isTeamMember = false;
-    let isTeamManager = false;
-    if (task.team) {
-      const teamData = await Team.findById(task.team);
-      if (teamData) {
-        isTeamMember = teamData.members.some(memberId => memberId.toString() === req.user._id.toString());
-        isTeamManager = teamData.managers.some(managerId => managerId.toString() === req.user._id.toString());
-      }
-    }
-
-    const isStatusUpdateOnly = Object.keys(req.body).length === 1 && req.body.hasOwnProperty('status');
-    let canUpdate = false;
-
-    // Admins can always update
-    if (req.user.role === 'admin') {
-      canUpdate = true;
-    }
-    // Managers can update if they created the task or manage the assigned team
-    else if (req.user.role === 'manager') {
-      if (isCreator || isTeamManager) {
-        canUpdate = true;
-      }
-    }
-    // Users can ONLY update the status if they are an assignee or a team member
-    else if (req.user.role === 'user') {
-      if (isStatusUpdateOnly && (isAssignee || isTeamMember)) {
-        canUpdate = true;
-      }
-    }
-
+    // Check Authorization
+    const canUpdate = await checkTaskUpdateAuth(req.user, task, req.body);
     if (!canUpdate) {
       return res.status(403).json({ message: "Not authorized to update this task" });
     }
-    // --- End of New Authorization Logic ---
 
     if (assignee && team) {
       return res
@@ -273,21 +240,8 @@ const updateTask = async (req, res, io, connectedUsers) => {
     const oldAssignee = oldTask.assignee ? oldTask.assignee.toString() : null; // Capture old assignee
     const oldTeam = oldTask.team ? oldTask.team.toString() : null; // Capture old team
 
-    // --- Start of Conditional Field Update ---
-    // If a regular 'user' is making the update, only allow the status to be changed.
-    if (req.user.role === 'user' && isStatusUpdateOnly) {
-      task.status = status;
-    } else {
-      // For admins and managers, allow a full update.
-      if (title !== undefined) task.title = title;
-      if (description !== undefined) task.description = description;
-      if (status !== undefined) task.status = status;
-      if (priority !== undefined) task.priority = priority;
-      if (dueDate !== undefined) task.dueDate = dueDate;
-      task.assignee = assignee === null ? null : assignee || task.assignee;
-      task.team = team === null ? null : team || task.team;
-    }
-    // --- End of Conditional Field Update ---
+    // Apply Updates
+    applyTaskUpdates(task, req.body, req.user);
 
     await task.save();
 
@@ -545,15 +499,66 @@ const getTaskStatsByPriority = async (req, res) => {
       }
     }
 
-    // SERVER-SIDE LOG: Check your terminal for this message
-    console.log(`[${new Date().toISOString()}] Server sending priority counts for user ${req.user.email}:`, counts);
+
 
     res.json(counts);
     
   } catch (error) {
     // SERVER-SIDE LOG: This will show if the function itself has an error
-    console.error(`[${new Date().toISOString()}] Error in getTaskStatsByPriority for user ${req.user.email}:`, error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// --- Helper Functions ---
+
+const checkTaskUpdateAuth = async (user, task, updateData) => {
+  const isCreator = task.createdBy.toString() === user._id.toString();
+  const isAssignee = task.assignee && task.assignee.toString() === user._id.toString();
+
+  let isTeamMember = false;
+  let isTeamManager = false;
+  if (task.team) {
+    const teamData = await Team.findById(task.team);
+    if (teamData) {
+      isTeamMember = teamData.members.some(memberId => memberId.toString() === user._id.toString());
+      isTeamManager = teamData.managers.some(managerId => managerId.toString() === user._id.toString());
+    }
+  }
+
+  const isStatusUpdateOnly = Object.keys(updateData).length === 1 && updateData.hasOwnProperty('status');
+
+  // Admin access
+  if (user.role === 'admin') return true;
+
+  // Manager access
+  if (user.role === 'manager') {
+    return isCreator || isTeamManager;
+  }
+
+  // User access
+  if (user.role === 'user') {
+    if (isStatusUpdateOnly && (isAssignee || isTeamMember)) {
+      return true;
+    }
+  }
+  
+  return false;
+};
+
+const applyTaskUpdates = (task, updates, user) => {
+  const { title, description, status, priority, dueDate, assignee, team } = updates;
+  const isStatusUpdateOnly = Object.keys(updates).length === 1 && updates.hasOwnProperty('status');
+
+  if (user.role === 'user' && isStatusUpdateOnly) {
+    task.status = status;
+  } else {
+    if (title !== undefined) task.title = title;
+    if (description !== undefined) task.description = description;
+    if (status !== undefined) task.status = status;
+    if (priority !== undefined) task.priority = priority;
+    if (dueDate !== undefined) task.dueDate = dueDate;
+    task.assignee = assignee === null ? null : assignee || task.assignee;
+    task.team = team === null ? null : team || task.team;
   }
 };
 

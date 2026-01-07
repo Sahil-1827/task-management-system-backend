@@ -15,7 +15,7 @@ module.exports = (io, connectedUsers) => {
   router.post("/", (req, res) => createTask(req, res, io, connectedUsers));
   router.get("/", getTasks);
   
-  // 2. Add the new route for statistics
+  // Route for statistics
   router.get("/stats/priority", getTaskStatsByPriority);
 
   router.get("/:id", getTaskById);

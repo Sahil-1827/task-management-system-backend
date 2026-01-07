@@ -19,7 +19,7 @@ const getUsers = async (req, res) => {
   }
 };
 
-// Add this new function to update the user profile
+// Update user profile
 const updateUserProfile = async (req, res) => {
   try {
     // Find the user by the ID from the authenticated token
@@ -64,5 +64,4 @@ const updateUserProfile = async (req, res) => {
 };
 
 
-// Export the new function along with the existing one
 module.exports = { getUsers, updateUserProfile };

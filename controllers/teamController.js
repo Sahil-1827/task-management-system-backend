@@ -36,17 +36,13 @@ const createTeam = async (req, res, io, connectedUsers) => {
 
     // Notify members that they have been added to the team
     if (members && members.length > 0) {
-      console.log('Connected users:', Array.from(connectedUsers));
       members.forEach((userId) => {
         const userIdStr = userId.toString();
         if (connectedUsers.has(userIdStr)) {
-          console.log(`Emitting teamAdded to connected user ${userIdStr}`);
           io.to(userIdStr).emit('teamAdded', {
             team: populatedTeam,
             message: `You have been added to team "${name}" by ${req.user.name}`,
           });
-        } else {
-          console.log(`User ${userIdStr} is not connected, skipping teamAdded notification`);
         }
       });
     }
@@ -234,18 +230,13 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       .populate('createdBy', 'name email');
 
     // Notify new members
-    console.log('populatedTeam:', populatedTeam);
-    console.log('connectedUsers:', Array.from(connectedUsers));
     addedMembers.forEach((userId) => {
       const userIdStr = userId.toString();
       if (connectedUsers.has(userIdStr)) {
-        console.log(`Emitting teamAdded to connected user ${userIdStr}`);
         io.to(userIdStr).emit('teamAdded', {
           team: populatedTeam,
           message: `You have been added to team "${team.name}" by ${req.user.name}`,
         });
-      } else {
-        console.log(`User ${userIdStr} is not connected, skipping teamAdded notification`);
       }
     });
 
@@ -253,13 +244,10 @@ const updateTeam = async (req, res, io, connectedUsers) => {
     removedMembers.forEach((userId) => {
       const userIdStr = userId.toString();
       if (connectedUsers.has(userIdStr)) {
-        console.log(`Emitting teamRemoved to connected user ${userIdStr}`);
         io.to(userIdStr).emit('teamRemoved', {
           teamId: team._id,
           message: `You have been removed from team "${oldTeam.name}" by ${req.user.name}`,
         });
-      } else {
-        console.log(`User ${userIdStr} is not connected, skipping teamRemoved notification`);
       }
     });
 
@@ -267,7 +255,6 @@ const updateTeam = async (req, res, io, connectedUsers) => {
     populatedTeam.members.forEach((member) => {
       const userIdStr = member._id.toString();
       if (connectedUsers.has(userIdStr)) {
-        console.log(`Emitting teamUpdated to connected user ${userIdStr}`); // Added this line
         io.to(userIdStr).emit('teamUpdated', {
           team: populatedTeam,
           message: `Team "${team.name}" has been updated by ${req.user.name}`,
@@ -329,13 +316,10 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
     teamMembers.forEach((userId) => {
       const userIdStr = userId.toString();
       if (connectedUsers.has(userIdStr)) {
-        console.log(`Emitting teamRemoved to connected user ${userIdStr}`);
         io.to(userIdStr).emit('teamRemoved', {
           teamId: req.params.id,
           message: `Team "${teamName}" has been deleted by ${req.user.name}`,
         });
-      } else {
-        console.log(`User ${userIdStr} is not connected, skipping teamRemoved notification`);
       }
     });
 

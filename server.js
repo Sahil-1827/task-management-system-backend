@@ -2,14 +2,14 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const rateLimit = require("express-rate-limit");
+
 const { Server } = require("socket.io");
 const http = require("http");
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const userRoutes = require("./routes/userRoutes");
 const teamRoutes = require("./routes/teamRoutes");
-const activityLogRoutes = require("./routes/activityLogRoutes"); // Add this line
+const activityLogRoutes = require("./routes/activityLogRoutes");
 
 dotenv.config();
 
@@ -39,6 +39,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rate Limiting
+// TODO: Re-enable rate limiting before production
 // const limiter = rateLimit({
 //   windowMs: 15 * 60 * 1000, // 15 minutes
 //   max: 100, // Limit each IP to 100 requests per windowMs
@@ -87,7 +88,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes(io, connectedUsers));
 app.use("/api/users", userRoutes);
 app.use("/api/teams", teamRoutes(io, connectedUsers));
-app.use("/api/activity-logs", activityLogRoutes(io, connectedUsers)); // Fixed: Pass io and connectedUsers
+app.use("/api/activity-logs", activityLogRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Task Management API" });
 });
