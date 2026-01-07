@@ -91,7 +91,7 @@ const createTask = async (req, res, io, connectedUsers) => {
     res.status(201).json(populatedTask);
   } catch (error) {
     console.error("Create task error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -168,7 +168,7 @@ const getTasks = async (req, res) => {
     });
   } catch (error) {
     console.error("Get tasks error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -205,7 +205,7 @@ const getTaskById = async (req, res) => {
     res.json(task);
   } catch (error) {
     console.error("Get task error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -382,7 +382,7 @@ if (task.assignee && connectedUsers.has(task.assignee.toString()) && task.assign
     res.json(populatedTask);
   } catch (error) {
     console.error("Update task error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -451,7 +451,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
     res.json({ message: "Task deleted successfully" });
   } catch (error) {
     console.error("Delete task error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -505,7 +505,7 @@ const getTaskStatsByPriority = async (req, res) => {
     
   } catch (error) {
     // SERVER-SIDE LOG: This will show if the function itself has an error
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 

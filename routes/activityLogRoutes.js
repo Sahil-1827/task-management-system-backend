@@ -45,7 +45,7 @@ router.get("/", protect, async (req, res) => {
     res.json(logs);
   } catch (error) {
     console.error("Error fetching activity logs:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 });
 

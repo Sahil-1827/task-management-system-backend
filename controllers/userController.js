@@ -15,7 +15,7 @@ const getUsers = async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -59,7 +59,7 @@ const updateUserProfile = async (req, res) => {
     if (error.code === 11000) {
         return res.status(400).json({ message: 'Email already in use' });
     }
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 

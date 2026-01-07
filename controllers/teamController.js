@@ -50,7 +50,7 @@ const createTeam = async (req, res, io, connectedUsers) => {
     res.status(201).json(populatedTeam);
   } catch (error) {
     console.error('Create team error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -110,7 +110,7 @@ const getTeams = async (req, res) => {
     });
   } catch (error) {
     console.error('Get teams error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -136,7 +136,7 @@ const getTeamById = async (req, res) => {
     res.json(team);
   } catch (error) {
     console.error('Get team error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -265,7 +265,7 @@ const updateTeam = async (req, res, io, connectedUsers) => {
     res.json(populatedTeam);
   } catch (error) {
     console.error('Update team error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -326,7 +326,7 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
     res.json({ message: 'Team deleted successfully' });
   } catch (error) {
     console.error('Delete team error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
