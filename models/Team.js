@@ -15,7 +15,7 @@ const teamSchema = new mongoose.Schema({
     ref: 'User',
   }],
   managers: [{
-    type: mongoose.Schema.Types.ObjectId, // Corrected from mongoose.schema.Types.ObjectId
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   }],
@@ -34,7 +34,7 @@ const teamSchema = new mongoose.Schema({
   },
 });
 
-// Update the updatedAt field on save
+
 teamSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();

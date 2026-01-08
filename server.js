@@ -18,19 +18,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   transports: ["websocket", "polling"],
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST", "PUT", "DELETE"],
-    },
-    pingTimeout: 60000, // 60 seconds
-    pingInterval: 25000,
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 const connectedUsers = new Set();
-const socketUserMap = new Map(); // Map socket.id to userId
+const socketUserMap = new Map();
 
-// Middleware
-app.use(cors({ 
+
+app.use(cors({
   origin: "*",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -39,15 +39,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate Limiting
-// TODO: Re-enable rate limiting before production
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100, // Limit each IP to 100 requests per windowMs
-// });
-// app.use(limiter);
 
-// MongoDB Connection
+
+
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -56,7 +50,7 @@ mongoose
   .then(() => console.log("MongoDB connected ✅"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// Socket.IO Setup
+
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
@@ -69,7 +63,7 @@ io.on("connection", (socket) => {
       const user = await User.findById(userId);
       socket.join(userId);
       connectedUsers.add(userId);
-      socketUserMap.set(socket.id, userId); // Map socket.id to userId
+      socketUserMap.set(socket.id, userId);
       console.log(`User ${userId}, ${user.name}, ${user.email}, ${user.role} joined room`);
       console.log("Connected users:", Array.from(connectedUsers));
     } catch (error) {
@@ -89,7 +83,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Routes
+
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes(io, connectedUsers));
 app.use("/api/users", userRoutes);
@@ -99,7 +93,7 @@ app.get("/", (req, res) => {
   res.json({ message: "Task Management API" });
 });
 
-// Start Server
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

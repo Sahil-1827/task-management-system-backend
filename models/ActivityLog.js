@@ -29,10 +29,10 @@ const activityLogSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    // Define the collection as capped
+
     capped: {
-      size: 16384, // The size of the collection in bytes. 16KB should be plenty for 25 logs.
-      max: 25 // The maximum number of documents in the collection.
+      size: 16384,
+      max: 25
     }
   }
 );

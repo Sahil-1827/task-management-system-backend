@@ -3,13 +3,13 @@ const Team = require("../models/Team");
 const ActivityLog = require("../models/ActivityLog");
 const User = require("../models/User");
 
-// Create a new task
+
 const createTask = async (req, res, io, connectedUsers) => {
   try {
     const { title, description, status, priority, dueDate, assignee, team } =
       req.body;
 
-    // Validate that task is assigned to either an assignee or a team, but not both
+
     if (assignee && team) {
       return res
         .status(400)
@@ -32,7 +32,7 @@ const createTask = async (req, res, io, connectedUsers) => {
 
     await task.save();
 
-    // Log task creation
+
     let logDetails = `Task "${task.title}" was created`;
     if (assignee) {
       const assignedUser = await User.findById(assignee);
@@ -59,7 +59,7 @@ const createTask = async (req, res, io, connectedUsers) => {
       .populate("team", "name")
       .populate("createdBy", "name email");
 
-    // Notify individual assignee
+
     if (assignee && connectedUsers.has(assignee.toString())) {
       io.to(assignee.toString()).emit("taskAssigned", {
         task: populatedTask,
@@ -67,7 +67,7 @@ const createTask = async (req, res, io, connectedUsers) => {
       });
     }
 
-    // Notify team members
+
     if (team) {
       const teamData = await Team.findById(team).populate(
         "members",
@@ -95,7 +95,7 @@ const createTask = async (req, res, io, connectedUsers) => {
   }
 };
 
-// Get all tasks (filtered by role, with pagination, search, and filters)
+
 const getTasks = async (req, res) => {
   try {
     const {
@@ -115,7 +115,7 @@ const getTasks = async (req, res) => {
 
     const queryConditions = [];
 
-    // Role-based filtering
+
     if (req.user.role === "manager") {
       queryConditions.push({
         $or: [{ createdBy: req.user._id }, { assignee: req.user._id }]
@@ -172,7 +172,7 @@ const getTasks = async (req, res) => {
   }
 };
 
-// Get a task by ID
+
 const getTaskById = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
@@ -184,7 +184,7 @@ const getTaskById = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Update authorization to also allow team members to view the task
+
     const userTeams = await Team.find({ members: req.user._id }).select("_id");
     const teamIds = userTeams.map((team) => team._id);
     const isTeamMember =
@@ -209,7 +209,7 @@ const getTaskById = async (req, res) => {
   }
 };
 
-// Update a task
+
 const updateTask = async (req, res, io, connectedUsers) => {
   try {
     const { title, description, status, priority, dueDate, assignee, team } =
@@ -221,7 +221,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Check Authorization
+
     const canUpdate = await checkTaskUpdateAuth(req.user, task, req.body);
     if (!canUpdate) {
       return res.status(403).json({ message: "Not authorized to update this task" });
@@ -236,16 +236,16 @@ const updateTask = async (req, res, io, connectedUsers) => {
         });
     }
 
-    const oldTask = { ...task._doc }; // Create a copy of the original task document
-    const oldAssignee = oldTask.assignee ? oldTask.assignee.toString() : null; // Capture old assignee
-    const oldTeam = oldTask.team ? oldTask.team.toString() : null; // Capture old team
+    const oldTask = { ...task._doc };
+    const oldAssignee = oldTask.assignee ? oldTask.assignee.toString() : null;
+    const oldTeam = oldTask.team ? oldTask.team.toString() : null;
 
-    // Apply Updates
+
     applyTaskUpdates(task, req.body, req.user);
 
     await task.save();
 
-    // Log task update with more specific details
+
     let changes = [];
     if (oldTask.title !== task.title)
       changes.push(`title from "${oldTask.title}" to "${task.title}"`);
@@ -303,7 +303,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       .populate("team", "name")
       .populate("createdBy", "name email");
 
-    // Notify admins and managers (excluding the updater)
+
     const adminsAndManagers = await User.find({ role: { $in: ['admin', 'manager'] }, _id: { $ne: req.user._id } });
     adminsAndManagers.forEach(user => {
       if (connectedUsers.has(user._id.toString())) {
@@ -314,7 +314,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       }
     });
 
-if (task.assignee && connectedUsers.has(task.assignee.toString()) && task.assignee.toString() !== req.user._id.toString()) {
+    if (task.assignee && connectedUsers.has(task.assignee.toString()) && task.assignee.toString() !== req.user._id.toString()) {
       io.to(task.assignee.toString()).emit("taskUpdated", {
         task: populatedTask,
         message: `Task "${task.title}" has been updated by ${req.user.name}`
@@ -386,7 +386,7 @@ if (task.assignee && connectedUsers.has(task.assignee.toString()) && task.assign
   }
 };
 
-// Delete a task
+
 const deleteTask = async (req, res, io, connectedUsers) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -408,7 +408,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
     const assignee = task.assignee?.toString();
     const team = task.team?.toString();
 
-    // Log task deletion before actually deleting
+
     await ActivityLog.create({
       action: "delete",
       entity: "task",
@@ -419,7 +419,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
 
     await Task.deleteOne({ _id: req.params.id });
 
-    // Notify individual assignee
+
     if (assignee && connectedUsers.has(assignee)) {
       io.to(assignee).emit("taskUnassigned", {
         taskId: req.params.id,
@@ -427,7 +427,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
       });
     }
 
-    // Notify team members
+
     if (team) {
       const teamData = await Team.findById(team).populate(
         "members",
@@ -455,12 +455,12 @@ const deleteTask = async (req, res, io, connectedUsers) => {
   }
 };
 
-// REPLACE any previous version of getTaskStatsByPriority with this one
+
 const getTaskStatsByPriority = async (req, res) => {
   try {
     const pipeline = [];
 
-    // 1. Conditionally build the initial filtering stage based on user role
+
     if (req.user.role === "user") {
       const userTeams = await Team.find({ members: req.user._id }).select("_id");
       const teamIds = userTeams.map((team) => team._id);
@@ -476,9 +476,9 @@ const getTaskStatsByPriority = async (req, res) => {
         },
       });
     }
-    // For 'admin', we add no initial $match stage, so they get stats for all tasks.
 
-    // 2. Add the final grouping stage to count by priority
+
+
     pipeline.push({
       $group: {
         _id: "$priority",
@@ -490,7 +490,7 @@ const getTaskStatsByPriority = async (req, res) => {
 
     const counts = { low: 0, medium: 0, high: 0 };
     for (const stat of priorityStats) {
-      // Handle tasks that may not have a priority set
+
       if (!stat._id) continue;
 
       const priorityKey = stat._id.toLowerCase();
@@ -502,14 +502,14 @@ const getTaskStatsByPriority = async (req, res) => {
 
 
     res.json(counts);
-    
+
   } catch (error) {
-    // SERVER-SIDE LOG: This will show if the function itself has an error
+
     res.status(500).json({ message: error.message });
   }
 };
 
-// --- Helper Functions ---
+
 
 const checkTaskUpdateAuth = async (user, task, updateData) => {
   const isCreator = task.createdBy.toString() === user._id.toString();
@@ -527,21 +527,21 @@ const checkTaskUpdateAuth = async (user, task, updateData) => {
 
   const isStatusUpdateOnly = Object.keys(updateData).length === 1 && updateData.hasOwnProperty('status');
 
-  // Admin access
+
   if (user.role === 'admin') return true;
 
-  // Manager access
+
   if (user.role === 'manager') {
     return isCreator || isTeamManager;
   }
 
-  // User access
+
   if (user.role === 'user') {
     if (isStatusUpdateOnly && (isAssignee || isTeamMember)) {
       return true;
     }
   }
-  
+
   return false;
 };
 

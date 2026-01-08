@@ -14,8 +14,8 @@ module.exports = (io, connectedUsers) => {
   router.use(protect);
   router.post("/", (req, res) => createTask(req, res, io, connectedUsers));
   router.get("/", getTasks);
-  
-  // Route for statistics
+
+
   router.get("/stats/priority", getTaskStatsByPriority);
 
   router.get("/:id", getTaskById);

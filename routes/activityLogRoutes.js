@@ -5,18 +5,18 @@ const Task = require("../models/Task");
 const Team = require("../models/Team");
 const { protect } = require("../middleware/authMiddleware");
 
-// Define the route handler
+
 router.get("/", protect, async (req, res) => {
   try {
     const { user } = req;
-    const { limit = 25 } = req.query; // Get limit from query, default to 25
+    const { limit = 25 } = req.query;
     let query = {};
 
     if (user.role === "admin") {
-      // Admins can see all logs
+
       query = {};
     } else {
-      // For non-admins, fetch tasks where the user is an assignee OR a member of the assigned team
+
       const userTeams = await Team.find({ members: user._id }).select(
         "_id"
       );
@@ -40,7 +40,7 @@ router.get("/", protect, async (req, res) => {
     const logs = await ActivityLog.find(query)
       .populate("performedBy", "name email")
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit)); // Add the limit to the query
+      .limit(parseInt(limit));
 
     res.json(logs);
   } catch (error) {
