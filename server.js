@@ -11,6 +11,7 @@ const userRoutes = require("./routes/userRoutes");
 const teamRoutes = require("./routes/teamRoutes");
 const activityLogRoutes = require("./routes/activityLogRoutes");
 const User = require("./models/User");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 dotenv.config();
 
@@ -89,6 +90,7 @@ app.use("/api/tasks", taskRoutes(io, connectedUsers));
 app.use("/api/users", userRoutes);
 app.use("/api/teams", teamRoutes(io, connectedUsers));
 app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Task Management API" });
 });
