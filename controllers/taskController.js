@@ -3,21 +3,16 @@ const Team = require("../models/Team");
 const ActivityLog = require("../models/ActivityLog");
 const User = require("../models/User");
 
-
 const createTask = async (req, res, io, connectedUsers) => {
   try {
     const { title, description, status, priority, dueDate, assignee, team } =
       req.body;
 
-
     if (assignee && team) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Task can only be assigned to either a user or a team, not both"
-        });
+      return res.status(400).json({
+        message:
+          "Task can only be assigned to either a user or a team, not both",
+      });
     }
 
     const task = new Task({
@@ -28,11 +23,10 @@ const createTask = async (req, res, io, connectedUsers) => {
       dueDate,
       assignee: assignee || null,
       team: team || null,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
 
     await task.save();
-
 
     let logDetails = `Task "${task.title}" was created`;
     if (assignee) {
@@ -52,7 +46,7 @@ const createTask = async (req, res, io, connectedUsers) => {
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
-      details: logDetails
+      details: logDetails,
     });
 
     const populatedTask = await Task.findById(task._id)
@@ -60,14 +54,12 @@ const createTask = async (req, res, io, connectedUsers) => {
       .populate("team", "name")
       .populate("createdBy", "name email profilePicture");
 
-
     if (assignee && connectedUsers.has(assignee.toString())) {
       io.to(assignee.toString()).emit("taskAssigned", {
         task: populatedTask,
-        message: `Task "${title}" has been assigned to you by ${req.user.name}`
+        message: `Task "${title}" has been assigned to you by ${req.user.name}`,
       });
     }
-
 
     if (team) {
       const teamData = await Team.findById(team).populate(
@@ -82,20 +74,19 @@ const createTask = async (req, res, io, connectedUsers) => {
           if (connectedUsers.has(userId)) {
             io.to(userId).emit("taskAssignedToTeam", {
               task: populatedTask,
-              message: `Task "${title}" has been assigned to your team "${teamData.name}" by ${req.user.name}`
+              message: `Task "${title}" has been assigned to your team "${teamData.name}" by ${req.user.name}`,
             });
           }
         });
       }
     }
 
-    res.status(201).json({ success: true, message: 'Task created successfully', data: populatedTask });
+    res.status(201).json(populatedTask);
   } catch (error) {
     console.error("Create task error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 const getTasks = async (req, res) => {
   try {
@@ -107,7 +98,7 @@ const getTasks = async (req, res) => {
       priority,
       assignee,
       sortField = "createdAt",
-      sortDirection = "desc"
+      sortDirection = "desc",
     } = req.query || {};
 
     const pageNum = parseInt(page);
@@ -116,16 +107,17 @@ const getTasks = async (req, res) => {
 
     const queryConditions = [];
 
-
     if (req.user.role === "manager") {
       queryConditions.push({
-        $or: [{ createdBy: req.user._id }, { assignee: req.user._id }]
+        $or: [{ createdBy: req.user._id }, { assignee: req.user._id }],
       });
     } else if (req.user.role === "user") {
-      const userTeams = await Team.find({ members: req.user._id }).select("_id");
+      const userTeams = await Team.find({ members: req.user._id }).select(
+        "_id"
+      );
       const teamIds = userTeams.map((team) => team._id);
       queryConditions.push({
-        $or: [{ assignee: req.user._id }, { team: { $in: teamIds } }]
+        $or: [{ assignee: req.user._id }, { team: { $in: teamIds } }],
       });
     }
 
@@ -133,18 +125,18 @@ const getTasks = async (req, res) => {
       queryConditions.push({
         $or: [
           { title: { $regex: search, $options: "i" } },
-          { description: { $regex: search, $options: "i" } }
-        ]
+          { description: { $regex: search, $options: "i" } },
+        ],
       });
     }
     if (status) {
-      const statuses = status.split(',');
+      const statuses = status.split(",");
       queryConditions.push({ status: { $in: statuses } });
     }
     if (priority) {
       queryConditions.push({ priority: priority });
     }
-    if (assignee && assignee !== 'undefined') {
+    if (assignee && assignee !== "undefined") {
       queryConditions.push({ assignee: assignee });
     }
 
@@ -162,21 +154,16 @@ const getTasks = async (req, res) => {
       .limit(limitNum);
 
     res.json({
-      success: true,
-      message: 'Tasks retrieved successfully',
-      data: {
-        tasks,
-        currentPage: pageNum,
-        totalPages: Math.ceil(total / limitNum),
-        totalTasks: total
-      }
+      tasks,
+      currentPage: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+      totalTasks: total,
     });
   } catch (error) {
     console.error("Get tasks error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 const getTaskById = async (req, res) => {
   try {
@@ -186,9 +173,8 @@ const getTaskById = async (req, res) => {
       .populate("createdBy", "name email profilePicture");
 
     if (!task) {
-      return res.status(404).json({ success: false, message: "Task not found" });
+      return res.status(404).json({ message: "Task not found" });
     }
-
 
     const userTeams = await Team.find({ members: req.user._id }).select("_id");
     const teamIds = userTeams.map((team) => team._id);
@@ -204,16 +190,15 @@ const getTaskById = async (req, res) => {
     ) {
       return res
         .status(403)
-        .json({ success: false, message: "Not authorized to view this task" });
+        .json({ message: "Not authorized to view this task" });
     }
 
-    res.json({ success: true, message: 'Task retrieved successfully', data: task });
+    res.json(task);
   } catch (error) {
     console.error("Get task error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 const updateTask = async (req, res, io, connectedUsers) => {
   try {
@@ -223,34 +208,30 @@ const updateTask = async (req, res, io, connectedUsers) => {
     const task = await Task.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ success: false, message: "Task not found" });
+      return res.status(404).json({ message: "Task not found" });
     }
-
 
     const canUpdate = await checkTaskUpdateAuth(req.user, task, req.body);
     if (!canUpdate) {
-      return res.status(403).json({ success: false, message: "Not authorized to update this task" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this task" });
     }
 
     if (assignee && team) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Task can only be assigned to either a user or a team, not both"
-        });
+      return res.status(400).json({
+        message:
+          "Task can only be assigned to either a user or a team, not both",
+      });
     }
 
     const oldTask = { ...task._doc };
     const oldAssignee = oldTask.assignee ? oldTask.assignee.toString() : null;
     const oldTeam = oldTask.team ? oldTask.team.toString() : null;
 
-
     applyTaskUpdates(task, req.body, req.user);
 
     await task.save();
-
 
     let changes = [];
     if (oldTask.title !== task.title)
@@ -301,7 +282,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
-      details: logDetails
+      details: logDetails,
     });
 
     const populatedTask = await Task.findById(task._id)
@@ -309,32 +290,44 @@ const updateTask = async (req, res, io, connectedUsers) => {
       .populate("team", "name")
       .populate("createdBy", "name email profilePicture");
 
-
-    const adminsAndManagers = await User.find({ role: { $in: ['admin', 'manager'] }, _id: { $ne: req.user._id } });
-    adminsAndManagers.forEach(user => {
+    const adminsAndManagers = await User.find({
+      role: { $in: ["admin", "manager"] },
+      _id: { $ne: req.user._id },
+    });
+    adminsAndManagers.forEach((user) => {
       if (connectedUsers.has(user._id.toString())) {
         io.to(user._id.toString()).emit("taskUpdated", {
           task: populatedTask,
-          message: `Task "${task.title}" has been updated by ${req.user.name}`
+          message: `Task "${task.title}" has been updated by ${req.user.name}`,
         });
       }
     });
 
-    if (task.assignee && connectedUsers.has(task.assignee.toString()) && task.assignee.toString() !== req.user._id.toString()) {
+    if (
+      task.assignee &&
+      connectedUsers.has(task.assignee.toString()) &&
+      task.assignee.toString() !== req.user._id.toString()
+    ) {
       io.to(task.assignee.toString()).emit("taskUpdated", {
         task: populatedTask,
-        message: `Task "${task.title}" has been updated by ${req.user.name}`
+        message: `Task "${task.title}" has been updated by ${req.user.name}`,
       });
     }
 
     if (task.team) {
-      const teamData = await Team.findById(task.team).populate("members", "name email profilePicture");
+      const teamData = await Team.findById(task.team).populate(
+        "members",
+        "name email profilePicture"
+      );
       if (teamData) {
         teamData.members.forEach((member) => {
-          if (connectedUsers.has(member._id.toString()) && member._id.toString() !== req.user._id.toString()) {
+          if (
+            connectedUsers.has(member._id.toString()) &&
+            member._id.toString() !== req.user._id.toString()
+          ) {
             io.to(member._id.toString()).emit("taskUpdated", {
               task: populatedTask,
-              message: `Task "${task.title}" in team "${teamData.name}" has been updated by ${req.user.name}`
+              message: `Task "${task.title}" in team "${teamData.name}" has been updated by ${req.user.name}`,
             });
           }
         });
@@ -345,39 +338,45 @@ const updateTask = async (req, res, io, connectedUsers) => {
       if (newAssigneeId && connectedUsers.has(newAssigneeId)) {
         io.to(newAssigneeId).emit("taskAssigned", {
           task: populatedTask,
-          message: `Task "${task.title}" has been assigned to you by ${req.user.name}`
+          message: `Task "${task.title}" has been assigned to you by ${req.user.name}`,
         });
       }
       if (oldAssignee && connectedUsers.has(oldAssignee)) {
         io.to(oldAssignee).emit("taskUnassigned", {
           taskId: task._id,
-          message: `Task "${task.title}" has been unassigned from you by ${req.user.name}`
+          message: `Task "${task.title}" has been unassigned from you by ${req.user.name}`,
         });
       }
     }
 
     if (newTeamId !== oldTeam) {
       if (newTeamId) {
-        const newTeamData = await Team.findById(newTeamId).populate("members", "name email profilePicture");
+        const newTeamData = await Team.findById(newTeamId).populate(
+          "members",
+          "name email profilePicture"
+        );
         if (newTeamData) {
           newTeamData.members.forEach((member) => {
             if (connectedUsers.has(member._id.toString())) {
               io.to(member._id.toString()).emit("taskAssignedToTeam", {
                 task: populatedTask,
-                message: `Task "${task.title}" has been assigned to your team "${newTeamData.name}" by ${req.user.name}`
+                message: `Task "${task.title}" has been assigned to your team "${newTeamData.name}" by ${req.user.name}`,
               });
             }
           });
         }
       }
       if (oldTeam) {
-        const oldTeamData = await Team.findById(oldTeam).populate("members", "name email profilePicture");
+        const oldTeamData = await Team.findById(oldTeam).populate(
+          "members",
+          "name email profilePicture"
+        );
         if (oldTeamData) {
           oldTeamData.members.forEach((member) => {
             if (connectedUsers.has(member._id.toString())) {
               io.to(member._id.toString()).emit("taskUnassigned", {
                 taskId: task._id,
-                message: `Task "${task.title}" has been unassigned from your team "${oldTeamData.name}" by ${req.user.name}`
+                message: `Task "${task.title}" has been unassigned from your team "${oldTeamData.name}" by ${req.user.name}`,
               });
             }
           });
@@ -385,20 +384,19 @@ const updateTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    res.json({ success: true, message: 'Task updated successfully', data: populatedTask });
+    res.json(populatedTask);
   } catch (error) {
     console.error("Update task error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 const deleteTask = async (req, res, io, connectedUsers) => {
   try {
     const task = await Task.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ success: false, message: "Task not found" });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     if (
@@ -407,32 +405,29 @@ const deleteTask = async (req, res, io, connectedUsers) => {
     ) {
       return res
         .status(403)
-        .json({ success: false, message: "Not authorized to delete this task" });
+        .json({ message: "Not authorized to delete this task" });
     }
 
     const taskTitle = task.title;
     const assignee = task.assignee?.toString();
     const team = task.team?.toString();
 
-
     await ActivityLog.create({
       action: "delete",
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
-      details: `Task "${taskTitle}" was deleted`
+      details: `Task "${taskTitle}" was deleted`,
     });
 
     await Task.deleteOne({ _id: req.params.id });
 
-
     if (assignee && connectedUsers.has(assignee)) {
       io.to(assignee).emit("taskUnassigned", {
         taskId: req.params.id,
-        message: `Task "${taskTitle}" has been deleted by ${req.user.name}`
+        message: `Task "${taskTitle}" has been deleted by ${req.user.name}`,
       });
     }
-
 
     if (team) {
       const teamData = await Team.findById(team).populate(
@@ -447,28 +442,28 @@ const deleteTask = async (req, res, io, connectedUsers) => {
           if (connectedUsers.has(userId)) {
             io.to(userId).emit("taskUnassigned", {
               taskId: req.params.id,
-              message: `Task "${taskTitle}" has been deleted from your team "${teamData.name}" by ${req.user.name}`
+              message: `Task "${taskTitle}" has been deleted from your team "${teamData.name}" by ${req.user.name}`,
             });
           }
         });
       }
     }
 
-    res.json({ success: true, message: "Task deleted successfully" });
+    res.json({ message: "Task deleted successfully" });
   } catch (error) {
     console.error("Delete task error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 const getTaskStatsByPriority = async (req, res) => {
   try {
     const pipeline = [];
 
-
     if (req.user.role === "user") {
-      const userTeams = await Team.find({ members: req.user._id }).select("_id");
+      const userTeams = await Team.find({ members: req.user._id }).select(
+        "_id"
+      );
       const teamIds = userTeams.map((team) => team._id);
       pipeline.push({
         $match: {
@@ -483,8 +478,6 @@ const getTaskStatsByPriority = async (req, res) => {
       });
     }
 
-
-
     pipeline.push({
       $group: {
         _id: "$priority",
@@ -496,7 +489,6 @@ const getTaskStatsByPriority = async (req, res) => {
 
     const counts = { low: 0, medium: 0, high: 0 };
     for (const stat of priorityStats) {
-
       if (!stat._id) continue;
 
       const priorityKey = stat._id.toLowerCase();
@@ -505,44 +497,41 @@ const getTaskStatsByPriority = async (req, res) => {
       }
     }
 
-
-
-    res.json({ success: true, message: 'Task stats retrieved successfully', data: counts });
-
+    res.json(counts);
   } catch (error) {
-
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-
-
 const checkTaskUpdateAuth = async (user, task, updateData) => {
   const isCreator = task.createdBy.toString() === user._id.toString();
-  const isAssignee = task.assignee && task.assignee.toString() === user._id.toString();
+  const isAssignee =
+    task.assignee && task.assignee.toString() === user._id.toString();
 
   let isTeamMember = false;
   let isTeamManager = false;
   if (task.team) {
     const teamData = await Team.findById(task.team);
     if (teamData) {
-      isTeamMember = teamData.members.some(memberId => memberId.toString() === user._id.toString());
-      isTeamManager = teamData.managers.some(managerId => managerId.toString() === user._id.toString());
+      isTeamMember = teamData.members.some(
+        (memberId) => memberId.toString() === user._id.toString()
+      );
+      isTeamManager = teamData.managers.some(
+        (managerId) => managerId.toString() === user._id.toString()
+      );
     }
   }
 
-  const isStatusUpdateOnly = Object.keys(updateData).length === 1 && updateData.hasOwnProperty('status');
+  const isStatusUpdateOnly =
+    Object.keys(updateData).length === 1 && updateData.hasOwnProperty("status");
 
+  if (user.role === "admin") return true;
 
-  if (user.role === 'admin') return true;
-
-
-  if (user.role === 'manager') {
+  if (user.role === "manager") {
     return isCreator || isTeamManager;
   }
 
-
-  if (user.role === 'user') {
+  if (user.role === "user") {
     if (isStatusUpdateOnly && (isAssignee || isTeamMember)) {
       return true;
     }
@@ -552,10 +541,12 @@ const checkTaskUpdateAuth = async (user, task, updateData) => {
 };
 
 const applyTaskUpdates = (task, updates, user) => {
-  const { title, description, status, priority, dueDate, assignee, team } = updates;
-  const isStatusUpdateOnly = Object.keys(updates).length === 1 && updates.hasOwnProperty('status');
+  const { title, description, status, priority, dueDate, assignee, team } =
+    updates;
+  const isStatusUpdateOnly =
+    Object.keys(updates).length === 1 && updates.hasOwnProperty("status");
 
-  if (user.role === 'user' && isStatusUpdateOnly) {
+  if (user.role === "user" && isStatusUpdateOnly) {
     task.status = status;
   } else {
     if (title !== undefined) task.title = title;
@@ -568,4 +559,11 @@ const applyTaskUpdates = (task, updates, user) => {
   }
 };
 
-module.exports = { createTask, getTasks, getTaskById, updateTask, deleteTask, getTaskStatsByPriority };
+module.exports = {
+  createTask,
+  getTasks,
+  getTaskById,
+  updateTask,
+  deleteTask,
+  getTaskStatsByPriority,
+};
