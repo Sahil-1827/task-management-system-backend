@@ -8,7 +8,7 @@ const createTeam = async (req, res, io, connectedUsers) => {
     const { name, description, members } = req.body;
 
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-      return res.status(403).json({ message: 'Not authorized to create teams' });
+      return res.status(403).json({ success: false, message: 'Not authorized to create teams' });
     }
 
     const team = new Team({
@@ -47,10 +47,10 @@ const createTeam = async (req, res, io, connectedUsers) => {
       });
     }
 
-    res.status(201).json(populatedTeam);
+    res.status(201).json({ success: true, message: 'Team created successfully', data: populatedTeam });
   } catch (error) {
     console.error('Create team error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -103,14 +103,18 @@ const getTeams = async (req, res) => {
     const totalTeams = await Team.countDocuments(query);
 
     res.json({
-      teams,
-      totalTeams,
-      currentPage: pageNum,
-      totalPages: Math.ceil(totalTeams / limitNum),
+      success: true,
+      message: 'Teams retrieved successfully',
+      data: {
+        teams,
+        totalTeams,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalTeams / limitNum),
+      }
     });
   } catch (error) {
     console.error('Get teams error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -122,7 +126,7 @@ const getTeamById = async (req, res) => {
       .populate('members', 'name email profilePicture');
 
     if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+      return res.status(404).json({ success: false, message: 'Team not found' });
     }
 
     if (
@@ -130,13 +134,13 @@ const getTeamById = async (req, res) => {
       team.createdBy._id.toString() !== req.user._id.toString() &&
       !team.members.some((member) => member._id.toString() === req.user._id.toString())
     ) {
-      return res.status(403).json({ message: 'Not authorized to view this team' });
+      return res.status(403).json({ success: false, message: 'Not authorized to view this team' });
     }
 
-    res.json(team);
+    res.json({ success: true, message: 'Team retrieved successfully', data: team });
   } catch (error) {
     console.error('Get team error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -147,14 +151,14 @@ const updateTeam = async (req, res, io, connectedUsers) => {
     const team = await Team.findById(req.params.id);
 
     if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+      return res.status(404).json({ success: false, message: 'Team not found' });
     }
 
     if (
       req.user.role !== 'admin' &&
       team.createdBy.toString() !== req.user._id.toString()
     ) {
-      return res.status(403).json({ message: 'Not authorized to update this team' });
+      return res.status(403).json({ success: false, message: 'Not authorized to update this team' });
     }
 
     const oldTeam = { ...team._doc };
@@ -262,10 +266,10 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       }
     });
 
-    res.json(populatedTeam);
+    res.json({ success: true, message: 'Team updated successfully', data: populatedTeam });
   } catch (error) {
     console.error('Update team error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -275,14 +279,14 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
     const team = await Team.findById(req.params.id);
 
     if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+      return res.status(404).json({ success: false, message: 'Team not found' });
     }
 
     if (
       req.user.role !== 'admin' &&
       team.createdBy.toString() !== req.user._id.toString()
     ) {
-      return res.status(403).json({ message: 'Not authorized to delete this team' });
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this team' });
     }
 
     const teamMembers = team.members.map((id) => id.toString());
@@ -323,10 +327,10 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
       }
     });
 
-    res.json({ message: 'Team deleted successfully' });
+    res.json({ success: true, message: 'Team deleted successfully' });
   } catch (error) {
     console.error('Delete team error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

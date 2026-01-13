@@ -79,17 +79,21 @@ const getDashboardStats = async (req, res) => {
         }
 
         res.json({
-            totalTasks: { value: totalTasks, trend: tasksTrend },
-            pendingTasks: { value: pendingTasks, trend: tasksTrend },
-            completedTasks: { value: completedTasks, trend: completedTrend },
-            activeTeams: { value: activeTeams, trend: teamsTrend },
-            highPriorityTasks,
-            totalUsers
+            success: true,
+            message: 'Dashboard stats retrieved successfully',
+            data: {
+                totalTasks: { value: totalTasks, trend: tasksTrend },
+                pendingTasks: { value: pendingTasks, trend: tasksTrend },
+                completedTasks: { value: completedTasks, trend: completedTrend },
+                activeTeams: { value: activeTeams, trend: teamsTrend },
+                highPriorityTasks,
+                totalUsers
+            }
         });
 
     } catch (error) {
         console.error("Dashboard stats error:", error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 

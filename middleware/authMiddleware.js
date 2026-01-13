@@ -14,15 +14,15 @@ const protect = async (req, res, next) => {
         .select('-password')
         .populate('teams');
       if (!req.user) {
-        return res.status(401).json({ message: 'User not found' });
+        return res.status(401).json({ success: false, message: 'User not found' });
       }
       next();
     } catch (error) {
       console.error('Token verification error:', error.message);
-      return res.status(401).json({ message: 'Not authorized, token failed' });
+      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
   } else {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ success: false, message: 'Not authorized, no token' });
   }
 };
 
@@ -30,7 +30,7 @@ const protect = async (req, res, next) => {
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Not authorized for this action' });
+      return res.status(403).json({ success: false, message: 'Not authorized for this action' });
     }
     next();
   };

@@ -12,10 +12,10 @@ const getUsers = async (req, res) => {
     } else {
       users = [];
     }
-    res.json(users);
+    res.json({ success: true, message: 'Users retrieved successfully', data: users });
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -59,23 +59,27 @@ const updateUserProfile = async (req, res) => {
       });
 
       res.json({
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        profilePicture: updatedUser.profilePicture,
-        createdAt: updatedUser.createdAt
+        success: true,
+        message: 'Profile updated successfully',
+        data: {
+          _id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          profilePicture: updatedUser.profilePicture,
+          createdAt: updatedUser.createdAt
+        }
       });
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ success: false, message: 'User not found' });
     }
   } catch (error) {
     console.error('Update profile error:', error);
 
     if (error.code === 11000) {
-      return res.status(400).json({ message: 'Email already in use' });
+      return res.status(400).json({ success: false, message: 'Email already in use' });
     }
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

@@ -9,13 +9,13 @@ const register = async (req, res) => {
 
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
+      return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use' });
+      return res.status(400).json({ success: false, message: 'Email already in use' });
     }
 
 
@@ -32,12 +32,16 @@ const register = async (req, res) => {
     const token = generateToken(user);
 
     res.status(201).json({
-      token,
-      user: { id: user._id, name, email, role: user.role, profilePicture: user.profilePicture, createdAt: user.createdAt },
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        token,
+        user: { id: user._id, name, email, role: user.role, profilePicture: user.profilePicture, createdAt: user.createdAt },
+      }
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -51,69 +55,76 @@ const login = async (req, res) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
-
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id).select('-password').populate('teams').populate('managedTeams').populate('managedTasks');
         if (!user) {
-          return res.status(401).json({ message: 'User not found' });
+          return res.status(401).json({ success: false, message: 'User not found' });
         }
 
         return res.json({
-          token,
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            teams: user.teams,
-            managedTeams: user.managedTeams,
-            managedTasks: user.managedTasks,
-            profilePicture: user.profilePicture,
-            createdAt: user.createdAt
-          },
+          success: true,
+          message: 'Login successful via token',
+          data: {
+            token,
+            user: {
+              id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              teams: user.teams,
+              managedTeams: user.managedTeams,
+              managedTasks: user.managedTasks,
+              profilePicture: user.profilePicture,
+              createdAt: user.createdAt
+            },
+          }
         });
       } catch (error) {
-
+        // Token invalid, fall through to email/pass login
       }
     }
 
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
 
     const user = await User.findOne({ email }).populate('teams').populate('managedTeams').populate('managedTasks');
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
 
     const token = generateToken(user);
 
     res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email,
-        role: user.role,
-        teams: user.teams,
-        managedTeams: user.managedTeams,
-        managedTasks: user.managedTasks,
-        profilePicture: user.profilePicture,
-        createdAt: user.createdAt
-      },
+      success: true,
+      message: 'Login successful',
+      data: {
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email,
+          role: user.role,
+          teams: user.teams,
+          managedTeams: user.managedTeams,
+          managedTasks: user.managedTasks,
+          profilePicture: user.profilePicture,
+          createdAt: user.createdAt
+        },
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

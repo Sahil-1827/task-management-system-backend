@@ -14,6 +14,7 @@ const createTask = async (req, res, io, connectedUsers) => {
       return res
         .status(400)
         .json({
+          success: false,
           message:
             "Task can only be assigned to either a user or a team, not both"
         });
@@ -88,10 +89,10 @@ const createTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    res.status(201).json(populatedTask);
+    res.status(201).json({ success: true, message: 'Task created successfully', data: populatedTask });
   } catch (error) {
     console.error("Create task error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -161,14 +162,18 @@ const getTasks = async (req, res) => {
       .limit(limitNum);
 
     res.json({
-      tasks,
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
-      totalTasks: total
+      success: true,
+      message: 'Tasks retrieved successfully',
+      data: {
+        tasks,
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalTasks: total
+      }
     });
   } catch (error) {
     console.error("Get tasks error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -181,7 +186,7 @@ const getTaskById = async (req, res) => {
       .populate("createdBy", "name email profilePicture");
 
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ success: false, message: "Task not found" });
     }
 
 
@@ -199,13 +204,13 @@ const getTaskById = async (req, res) => {
     ) {
       return res
         .status(403)
-        .json({ message: "Not authorized to view this task" });
+        .json({ success: false, message: "Not authorized to view this task" });
     }
 
-    res.json(task);
+    res.json({ success: true, message: 'Task retrieved successfully', data: task });
   } catch (error) {
     console.error("Get task error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -218,19 +223,20 @@ const updateTask = async (req, res, io, connectedUsers) => {
     const task = await Task.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ success: false, message: "Task not found" });
     }
 
 
     const canUpdate = await checkTaskUpdateAuth(req.user, task, req.body);
     if (!canUpdate) {
-      return res.status(403).json({ message: "Not authorized to update this task" });
+      return res.status(403).json({ success: false, message: "Not authorized to update this task" });
     }
 
     if (assignee && team) {
       return res
         .status(400)
         .json({
+          success: false,
           message:
             "Task can only be assigned to either a user or a team, not both"
         });
@@ -379,10 +385,10 @@ const updateTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    res.json(populatedTask);
+    res.json({ success: true, message: 'Task updated successfully', data: populatedTask });
   } catch (error) {
     console.error("Update task error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -392,7 +398,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
     const task = await Task.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ success: false, message: "Task not found" });
     }
 
     if (
@@ -401,7 +407,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
     ) {
       return res
         .status(403)
-        .json({ message: "Not authorized to delete this task" });
+        .json({ success: false, message: "Not authorized to delete this task" });
     }
 
     const taskTitle = task.title;
@@ -448,10 +454,10 @@ const deleteTask = async (req, res, io, connectedUsers) => {
       }
     }
 
-    res.json({ message: "Task deleted successfully" });
+    res.json({ success: true, message: "Task deleted successfully" });
   } catch (error) {
     console.error("Delete task error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -501,11 +507,11 @@ const getTaskStatsByPriority = async (req, res) => {
 
 
 
-    res.json(counts);
+    res.json({ success: true, message: 'Task stats retrieved successfully', data: counts });
 
   } catch (error) {
 
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
