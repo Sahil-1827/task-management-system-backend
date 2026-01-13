@@ -31,8 +31,8 @@ const createTeam = async (req, res, io, connectedUsers) => {
     });
 
     const populatedTeam = await Team.findById(team._id)
-      .populate('members', 'name email')
-      .populate('createdBy', 'name email');
+      .populate('members', 'name email profilePicture')
+      .populate('createdBy', 'name email profilePicture');
 
 
     if (members && members.length > 0) {
@@ -94,8 +94,8 @@ const getTeams = async (req, res) => {
 
 
     const teams = await Team.find(query)
-      .populate('createdBy', 'name email')
-      .populate('members', 'name email')
+      .populate('createdBy', 'name email profilePicture')
+      .populate('members', 'name email profilePicture')
       .skip(skip)
       .limit(limitNum);
 
@@ -118,8 +118,8 @@ const getTeams = async (req, res) => {
 const getTeamById = async (req, res) => {
   try {
     const team = await Team.findById(req.params.id)
-      .populate('createdBy', 'name email')
-      .populate('members', 'name email');
+      .populate('createdBy', 'name email profilePicture')
+      .populate('members', 'name email profilePicture');
 
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
@@ -226,8 +226,8 @@ const updateTeam = async (req, res, io, connectedUsers) => {
 
 
     const populatedTeam = await Team.findById(team._id)
-      .populate('members', 'name email')
-      .populate('createdBy', 'name email');
+      .populate('members', 'name email profilePicture')
+      .populate('createdBy', 'name email profilePicture');
 
 
     addedMembers.forEach((userId) => {

@@ -55,9 +55,9 @@ const createTask = async (req, res, io, connectedUsers) => {
     });
 
     const populatedTask = await Task.findById(task._id)
-      .populate("assignee", "name email")
+      .populate("assignee", "name email profilePicture")
       .populate("team", "name")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email profilePicture");
 
 
     if (assignee && connectedUsers.has(assignee.toString())) {
@@ -153,9 +153,9 @@ const getTasks = async (req, res) => {
 
     const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
-      .populate("assignee", "name email")
+      .populate("assignee", "name email profilePicture")
       .populate("team", "name description")
-      .populate("createdBy", "name email")
+      .populate("createdBy", "name email profilePicture")
       .sort(sort)
       .skip(skip)
       .limit(limitNum);
@@ -176,9 +176,9 @@ const getTasks = async (req, res) => {
 const getTaskById = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
-      .populate("assignee", "name email")
+      .populate("assignee", "name email profilePicture")
       .populate("team", "name")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email profilePicture");
 
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
@@ -299,9 +299,9 @@ const updateTask = async (req, res, io, connectedUsers) => {
     });
 
     const populatedTask = await Task.findById(task._id)
-      .populate("assignee", "name email")
+      .populate("assignee", "name email profilePicture")
       .populate("team", "name")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email profilePicture");
 
 
     const adminsAndManagers = await User.find({ role: { $in: ['admin', 'manager'] }, _id: { $ne: req.user._id } });
@@ -322,7 +322,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
     }
 
     if (task.team) {
-      const teamData = await Team.findById(task.team).populate("members", "name email");
+      const teamData = await Team.findById(task.team).populate("members", "name email profilePicture");
       if (teamData) {
         teamData.members.forEach((member) => {
           if (connectedUsers.has(member._id.toString()) && member._id.toString() !== req.user._id.toString()) {
@@ -352,7 +352,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
 
     if (newTeamId !== oldTeam) {
       if (newTeamId) {
-        const newTeamData = await Team.findById(newTeamId).populate("members", "name email");
+        const newTeamData = await Team.findById(newTeamId).populate("members", "name email profilePicture");
         if (newTeamData) {
           newTeamData.members.forEach((member) => {
             if (connectedUsers.has(member._id.toString())) {
@@ -365,7 +365,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
         }
       }
       if (oldTeam) {
-        const oldTeamData = await Team.findById(oldTeam).populate("members", "name email");
+        const oldTeamData = await Team.findById(oldTeam).populate("members", "name email profilePicture");
         if (oldTeamData) {
           oldTeamData.members.forEach((member) => {
             if (connectedUsers.has(member._id.toString())) {

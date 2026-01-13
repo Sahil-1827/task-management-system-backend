@@ -10,6 +10,10 @@ router.use(protect);
 router.get('/', getUsers);
 
 
-router.put('/profile', updateUserProfile);
+
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.put('/profile', upload.single('profilePicture'), updateUserProfile);
 
 module.exports = router;

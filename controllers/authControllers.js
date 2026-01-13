@@ -33,7 +33,7 @@ const register = async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { id: user._id, name, email, role: user.role, createdAt: user.createdAt },
+      user: { id: user._id, name, email, role: user.role, profilePicture: user.profilePicture, createdAt: user.createdAt },
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -68,6 +68,7 @@ const login = async (req, res) => {
             teams: user.teams,
             managedTeams: user.managedTeams,
             managedTasks: user.managedTasks,
+            profilePicture: user.profilePicture,
             createdAt: user.createdAt
           },
         });
@@ -106,6 +107,7 @@ const login = async (req, res) => {
         teams: user.teams,
         managedTeams: user.managedTeams,
         managedTasks: user.managedTasks,
+        profilePicture: user.profilePicture,
         createdAt: user.createdAt
       },
     });
