@@ -3,6 +3,8 @@ const Team = require("../models/Team");
 const ActivityLog = require("../models/ActivityLog");
 const User = require("../models/User");
 
+const Comment = require("../models/Comment");
+
 const createTask = async (req, res, io, connectedUsers) => {
   try {
     const { title, description, status, priority, dueDate, assignees, team } =
@@ -196,8 +198,26 @@ const getTasks = async (req, res) => {
       .skip(skip)
       .limit(limitNum);
 
+    // Aggregate comments for these tasks
+    const taskIds = tasks.map(t => t._id);
+    const commentCounts = await Comment.aggregate([
+      { $match: { task: { $in: taskIds } } },
+      { $group: { _id: "$task", count: { $sum: 1 } } }
+    ]);
+
+    const countMap = {};
+    commentCounts.forEach(c => {
+      countMap[c._id.toString()] = c.count;
+    });
+
+    const tasksWithCounts = tasks.map(task => {
+      const taskObj = task.toObject();
+      taskObj.commentCount = countMap[task._id.toString()] || 0;
+      return taskObj;
+    });
+
     res.json({
-      tasks,
+      tasks: tasksWithCounts,
       currentPage: pageNum,
       totalPages: Math.ceil(total / limitNum),
       totalTasks: total,
