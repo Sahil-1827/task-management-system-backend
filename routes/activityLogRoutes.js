@@ -12,9 +12,11 @@ router.get("/", protect, async (req, res) => {
     const { limit = 25 } = req.query;
     let query = {};
 
-    if (user.role === "admin") {
+    const rootAdminId = user.role === "admin" ? user._id : user.adminId;
+    query = { adminId: rootAdminId };
 
-      query = {};
+    if (user.role === "admin") {
+      // Admin sees all logs for their scope (already filtered by adminId)
     } else {
 
       const userTeams = await Team.find({ members: user._id }).select(
@@ -35,6 +37,9 @@ router.get("/", protect, async (req, res) => {
           { entity: "user", entityId: user._id }
         ]
       };
+
+      // Ensure we still scope to the adminId even for restricted views
+      query.adminId = rootAdminId;
     }
 
     const logs = await ActivityLog.find(query)

@@ -57,6 +57,7 @@ const updateUserProfile = async (req, res) => {
         entity: "user",
         entityId: updatedUser._id,
         performedBy: req.user._id,
+        adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
         details: `User profile for "${updatedUser.name}" was updated by ${req.user.name}`,
       });
 

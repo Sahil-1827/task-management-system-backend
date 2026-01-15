@@ -28,6 +28,7 @@ const createTeam = async (req, res, io, connectedUsers) => {
       entity: "team",
       entityId: team._id,
       performedBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
       details: `Team "${team.name}" was created by ${req.user.name}`,
     });
 
@@ -195,6 +196,7 @@ const updateTeam = async (req, res, io, connectedUsers) => {
       entity: "team",
       entityId: team._id,
       performedBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
       details: logDetails,
     });
 
@@ -204,6 +206,7 @@ const updateTeam = async (req, res, io, connectedUsers) => {
         entity: "user",
         entityId: userId,
         performedBy: req.user._id,
+        adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
         details: `You were added to team "${team.name}" by ${req.user.name}`,
       });
     }
@@ -214,6 +217,7 @@ const updateTeam = async (req, res, io, connectedUsers) => {
         entity: "user",
         entityId: userId,
         performedBy: req.user._id,
+        adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
         details: `You were removed from team "${oldTeam.name}" by ${req.user.name}`,
       });
     }
@@ -284,6 +288,7 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
       entity: "team",
       entityId: team._id,
       performedBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
       details: `Team "${teamName}" was deleted by ${req.user.name}`,
     });
 
@@ -294,6 +299,7 @@ const deleteTeam = async (req, res, io, connectedUsers) => {
           entity: "user",
           entityId: userId,
           performedBy: req.user._id,
+          adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
           details: `The team "${teamName}" you were a member of was deleted by ${req.user.name}`,
         });
       }

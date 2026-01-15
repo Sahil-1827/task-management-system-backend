@@ -47,6 +47,7 @@ const createTask = async (req, res, io, connectedUsers) => {
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
       details: logDetails,
     });
 
@@ -284,6 +285,7 @@ const updateTask = async (req, res, io, connectedUsers) => {
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
       details: logDetails,
     });
 
@@ -295,6 +297,10 @@ const updateTask = async (req, res, io, connectedUsers) => {
     const adminsAndManagers = await User.find({
       role: { $in: ["admin", "manager"] },
       _id: { $ne: req.user._id },
+      $or: [
+        { _id: task.adminId },
+        { adminId: task.adminId }
+      ]
     });
     adminsAndManagers.forEach((user) => {
       if (connectedUsers.has(user._id.toString())) {
@@ -419,6 +425,7 @@ const deleteTask = async (req, res, io, connectedUsers) => {
       entity: "task",
       entityId: task._id,
       performedBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
       details: `Task "${taskTitle}" was deleted`,
     });
 
