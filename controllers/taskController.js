@@ -24,6 +24,7 @@ const createTask = async (req, res, io, connectedUsers) => {
       assignee: assignee || null,
       team: team || null,
       createdBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
     });
 
     await task.save();
@@ -105,7 +106,8 @@ const getTasks = async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    const queryConditions = [];
+    const rootAdminId = req.user.role === "admin" ? req.user._id : req.user.adminId;
+    const queryConditions = [{ adminId: rootAdminId }];
 
     if (req.user.role === "manager") {
       queryConditions.push({

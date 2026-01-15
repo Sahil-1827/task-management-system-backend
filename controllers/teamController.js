@@ -18,6 +18,7 @@ const createTeam = async (req, res, io, connectedUsers) => {
       members: members || [],
       managers: [req.user._id],
       createdBy: req.user._id,
+      adminId: req.user.role === "admin" ? req.user._id : req.user.adminId,
     });
 
     await team.save();
@@ -61,15 +62,19 @@ const getTeams = async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    let query = {};
-    if (req.user.role === "admin") {
-      query = {};
-    } else if (req.user.role === "manager") {
+    const rootAdminId = req.user.role === "admin" ? req.user._id : req.user.adminId;
+    let query = { adminId: rootAdminId };
+
+    if (req.user.role === "manager") {
       query = {
+        ...query,
         $or: [{ createdBy: req.user._id }, { members: req.user._id }],
       };
-    } else {
-      query = { members: req.user._id };
+    } else if (req.user.role === "user") {
+      query = {
+        ...query,
+        members: req.user._id
+      };
     }
 
     if (search) {
@@ -181,9 +186,8 @@ const updateTeam = async (req, res, io, connectedUsers) => {
 
     let logDetails = `Team "${team.name}" was updated by ${req.user.name}.`;
     if (changes.length > 0) {
-      logDetails = `Team "${team.name}" updated by ${
-        req.user.name
-      }: ${changes.join(", ")}.`;
+      logDetails = `Team "${team.name}" updated by ${req.user.name
+        }: ${changes.join(", ")}.`;
     }
 
     await ActivityLog.create({
