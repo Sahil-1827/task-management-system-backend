@@ -19,7 +19,7 @@ const register = async (req, res) => {
       name,
       email,
       password,
-      role: role || "user",
+      role: "admin",
     });
 
     await user.save();
@@ -97,6 +97,10 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    if (!user.isActive) {
+      return res.status(401).json({ message: "You are deactivated by admin" });
+    }
+
     const token = generateToken(user);
 
     res.json({
@@ -119,4 +123,14 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    res.json(user);
+  } catch (error) {
+    console.error("Get me error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { register, login, getMe };

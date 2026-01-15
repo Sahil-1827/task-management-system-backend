@@ -21,7 +21,7 @@ const io = new Server(server, {
   transports: ["websocket", "polling"],
   cors: {
     origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   },
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -34,7 +34,7 @@ const socketUserMap = new Map();
 app.use(cors({
   origin: "*",
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json());

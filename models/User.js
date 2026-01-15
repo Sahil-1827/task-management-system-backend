@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Task',
   }],
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -42,6 +47,10 @@ const userSchema = new mongoose.Schema({
   profilePicture: {
     type: String,
     default: "",
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
   },
 });
 
