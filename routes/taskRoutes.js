@@ -8,6 +8,8 @@ const {
   updateTask,
   deleteTask,
   getTaskStatsByPriority,
+  addTaskLink,
+  removeTaskLink
 } = require("../controllers/taskController");
 
 module.exports = (io, connectedUsers) => {
@@ -21,6 +23,9 @@ module.exports = (io, connectedUsers) => {
   router.get("/:id", getTaskById);
   router.put("/:id", (req, res) => updateTask(req, res, io, connectedUsers));
   router.delete("/:id", (req, res) => deleteTask(req, res, io, connectedUsers));
+
+  router.post("/:id/links", addTaskLink);
+  router.delete("/:id/links/:linkId", removeTaskLink);
 
   return router;
 };

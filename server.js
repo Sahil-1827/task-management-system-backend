@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const userRoutes = require("./routes/userRoutes");
 const teamRoutes = require("./routes/teamRoutes");
+const commentRoutes = require("./routes/commentRoutes");
 const activityLogRoutes = require("./routes/activityLogRoutes");
 const User = require("./models/User");
 const dashboardRoutes = require("./routes/dashboardRoutes");
@@ -72,6 +73,16 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("joinTask", (taskId) => {
+    socket.join(taskId);
+    console.log(`Socket ${socket.id} joined task room ${taskId}`);
+  });
+
+  socket.on("leaveTask", (taskId) => {
+    socket.leave(taskId);
+    console.log(`Socket ${socket.id} left task room ${taskId}`);
+  });
+
   socket.on("disconnect", () => {
     const userId = socketUserMap.get(socket.id);
     if (userId) {
@@ -89,6 +100,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes(io, connectedUsers));
 app.use("/api/users", userRoutes);
 app.use("/api/teams", teamRoutes(io, connectedUsers));
+app.use("/api/comments", commentRoutes(io));
 app.use("/api/activity-logs", activityLogRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.get("/", (req, res) => {

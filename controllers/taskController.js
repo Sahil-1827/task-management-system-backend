@@ -90,6 +90,43 @@ const createTask = async (req, res, io, connectedUsers) => {
   }
 };
 
+const addTaskLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, url } = req.body;
+
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    task.links.push({ title, url });
+    await task.save();
+
+    res.status(201).json(task.links);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const removeTaskLink = async (req, res) => {
+  try {
+    const { id, linkId } = req.params;
+
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    task.links = task.links.filter(link => link._id.toString() !== linkId);
+    await task.save();
+
+    res.json(task.links);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getTasks = async (req, res) => {
   try {
     const {
@@ -111,9 +148,9 @@ const getTasks = async (req, res) => {
     const queryConditions = [{ adminId: rootAdminId }];
 
     if (req.user.role === "manager") {
-      queryConditions.push({
-        $or: [{ createdBy: req.user._id }, { assignee: req.user._id }],
-      });
+      // queryConditions.push({
+      //   $or: [{ createdBy: req.user._id }, { assignee: req.user._id }],
+      // });
     } else if (req.user.role === "user") {
       const userTeams = await Team.find({ members: req.user._id }).select(
         "_id"
@@ -565,6 +602,8 @@ const applyTaskUpdates = (task, updates, user) => {
     if (dueDate !== undefined) task.dueDate = dueDate;
     task.assignee = assignee === null ? null : assignee || task.assignee;
     task.team = team === null ? null : team || task.team;
+    if (updates.comments !== undefined) task.comments = updates.comments;
+    if (updates.links !== undefined) task.links = updates.links;
   }
 };
 
@@ -575,4 +614,6 @@ module.exports = {
   updateTask,
   deleteTask,
   getTaskStatsByPriority,
+  addTaskLink,
+  removeTaskLink
 };
