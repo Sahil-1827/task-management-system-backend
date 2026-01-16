@@ -54,7 +54,11 @@ const createTask = async (req, res, io, connectedUsers) => {
 
     const populatedTask = await Task.findById(task._id)
       .populate("assignees", "name email profilePicture")
-      .populate("team", "name")
+      .populate({
+        path: "team",
+        select: "name members",
+        populate: { path: "members", select: "name email profilePicture" }
+      })
       .populate("createdBy", "name email profilePicture");
 
     if (assignees && assignees.length > 0) {
@@ -192,7 +196,11 @@ const getTasks = async (req, res) => {
     const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
       .populate("assignees", "name email profilePicture")
-      .populate("team", "name description")
+      .populate({
+        path: "team",
+        select: "name description members",
+        populate: { path: "members", select: "name email profilePicture" }
+      })
       .populate("createdBy", "name email profilePicture")
       .sort(sort)
       .skip(skip)
@@ -232,7 +240,11 @@ const getTaskById = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
       .populate("assignees", "name email profilePicture")
-      .populate("team", "name")
+      .populate({
+        path: "team",
+        select: "name members",
+        populate: { path: "members", select: "name email profilePicture" }
+      })
       .populate("createdBy", "name email profilePicture");
 
     if (!task) {
@@ -353,7 +365,11 @@ const updateTask = async (req, res, io, connectedUsers) => {
 
     const populatedTask = await Task.findById(task._id)
       .populate("assignees", "name email profilePicture")
-      .populate("team", "name")
+      .populate({
+        path: "team",
+        select: "name members",
+        populate: { path: "members", select: "name email profilePicture" }
+      })
       .populate("createdBy", "name email profilePicture");
 
     const adminsAndManagers = await User.find({
