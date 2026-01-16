@@ -81,8 +81,40 @@ const deleteComment = async (req, res, io) => {
     }
 };
 
+const togglePin = async (req, res, io) => {
+    try {
+        const { id } = req.params;
+        const comment = await Comment.findById(id);
+
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        comment.isPinned = !comment.isPinned;
+        await comment.save();
+
+        const populatedComment = await Comment.findById(id)
+            .populate('user', 'name profilePicture')
+            .populate({
+                path: 'replyTo',
+                select: 'text user',
+                populate: { path: 'user', select: 'name' }
+            });
+
+        if (io) {
+            io.to(comment.task.toString()).emit('commentUpdated', populatedComment);
+        }
+
+        res.json(populatedComment);
+    } catch (error) {
+        console.error('Error toggling pin:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     addComment,
     getComments,
-    deleteComment
+    deleteComment,
+    togglePin
 };
