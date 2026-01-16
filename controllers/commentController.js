@@ -3,7 +3,7 @@ const Task = require('../models/Task');
 
 const addComment = async (req, res, io) => {
     try {
-        const { text, taskId } = req.body;
+        const { text, taskId, replyTo } = req.body;
 
         const task = await Task.findById(taskId);
         if (!task) {
@@ -13,10 +13,17 @@ const addComment = async (req, res, io) => {
         const comment = await Comment.create({
             text,
             task: taskId,
-            user: req.user._id
+            user: req.user._id,
+            replyTo: replyTo || null
         });
 
-        const populatedComment = await Comment.findById(comment._id).populate('user', 'name profilePicture');
+        const populatedComment = await Comment.findById(comment._id)
+            .populate('user', 'name profilePicture')
+            .populate({
+                path: 'replyTo',
+                select: 'text user',
+                populate: { path: 'user', select: 'name' }
+            });
 
         if (io) {
             io.to(taskId).emit('commentAdded', populatedComment);
@@ -34,6 +41,11 @@ const getComments = async (req, res) => {
         const { taskId } = req.params;
         const comments = await Comment.find({ task: taskId })
             .populate('user', 'name profilePicture')
+            .populate({
+                path: 'replyTo',
+                select: 'text user',
+                populate: { path: 'user', select: 'name' }
+            })
             .sort({ createdAt: 1 });
 
         res.json(comments);

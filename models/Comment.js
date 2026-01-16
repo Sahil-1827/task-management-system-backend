@@ -20,6 +20,11 @@ const commentSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
         expires: 172800 // 2 days in seconds
+    },
+    replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Comment',
+        default: null
     }
 });
 
