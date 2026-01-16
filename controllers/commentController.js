@@ -68,13 +68,24 @@ const deleteComment = async (req, res, io) => {
             return res.status(403).json({ message: 'Not authorized to delete this comment' });
         }
 
-        await comment.deleteOne();
+        comment.isDeleted = true;
+        comment.text = "This message was deleted";
+        comment.isPinned = false; // Unpin if deleted
+        await comment.save();
+
+        const populatedComment = await Comment.findById(id)
+            .populate('user', 'name profilePicture')
+            .populate({
+                path: 'replyTo',
+                select: 'text user',
+                populate: { path: 'user', select: 'name' }
+            });
 
         if (io) {
-            io.to(comment.task.toString()).emit('commentDeleted', id);
+            io.to(comment.task.toString()).emit('commentUpdated', populatedComment);
         }
 
-        res.json({ message: 'Comment deleted' });
+        res.json(populatedComment);
     } catch (error) {
         console.error('Error deleting comment:', error);
         res.status(500).json({ error: error.message });
